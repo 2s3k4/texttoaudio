@@ -22,7 +22,6 @@ body {
     padding: 10px;
 }
 
-/* CARD */
 .container {
     background: rgba(255,255,255,0.95);
     backdrop-filter: blur(10px);
@@ -34,7 +33,6 @@ body {
     border: 2px solid #ffd700;
 }
 
-/* HEADER */
 h1 {
     text-align: center;
     font-size: 1.8rem;
@@ -50,14 +48,12 @@ h1 {
     margin-bottom: 15px;
 }
 
-/* CONTROLS */
 .controls {
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
 
-/* CONTROL BOX */
 .control-box {
     background: #fffbea;
     padding: 10px;
@@ -65,7 +61,6 @@ h1 {
     border: 1px solid #ffe066;
 }
 
-/* LABEL */
 label {
     font-size: 13px;
     color: #7a5c00;
@@ -73,7 +68,6 @@ label {
     display: block;
 }
 
-/* INPUTS */
 select, input[type="range"] {
     width: 100%;
 }
@@ -93,11 +87,10 @@ textarea::placeholder {
     color: #c9a300;
 }
 
-/* BUTTONS */
 .buttons {
     margin-top: 15px;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
 }
 
@@ -118,7 +111,6 @@ button:hover {
     background: #ffcc00;
 }
 
-/* STATUS */
 .status {
     text-align: center;
     margin-top: 10px;
@@ -126,14 +118,9 @@ button:hover {
     color: #7a5c00;
 }
 
-/* MOBILE OPTIMIZATION */
 @media (max-width: 400px) {
-    h1 {
-        font-size: 1.4rem;
-    }
-    textarea {
-        height: 100px;
-    }
+    h1 { font-size: 1.4rem; }
+    textarea { height: 100px; }
 }
 </style>
 </head>
@@ -165,8 +152,9 @@ button:hover {
 
     <div class="buttons">
         <button onclick="speak()">▶ Speak</button>
+        <button onclick="pause()">⏸ Pause</button>
+        <button onclick="resume()">▶ Resume</button>
         <button onclick="stop()">⏹ Stop</button>
-        <button onclick="downloadAudio()">⬇ Download</button>
     </div>
 
     <div class="status" id="status">Ready</div>
@@ -190,6 +178,8 @@ function loadVoices() {
 speechSynthesis.onvoiceschanged = loadVoices;
 loadVoices();
 
+let currentUtterance = null;
+
 // Create speech
 function createUtterance() {
     let text = document.getElementById("text").value;
@@ -209,64 +199,30 @@ function createUtterance() {
 
     u.onstart = () => statusDiv.innerText = "🔊 Speaking...";
     u.onend = () => statusDiv.innerText = "✅ Done";
+    u.onpause = () => statusDiv.innerText = "⏸ Paused";
+    u.onresume = () => statusDiv.innerText = "▶ Resumed";
 
     return u;
 }
 
-// Speak
+// Controls
 function speak() {
     synth.cancel();
-    let u = createUtterance();
-    if (u) synth.speak(u);
+    currentUtterance = createUtterance();
+    if (currentUtterance) synth.speak(currentUtterance);
 }
 
-// Stop
+function pause() {
+    if (synth.speaking) synth.pause();
+}
+
+function resume() {
+    if (synth.paused) synth.resume();
+}
+
 function stop() {
     synth.cancel();
     statusDiv.innerText = "⏹ Stopped";
-}
-
-// Download (mic-based)
-async function downloadAudio() {
-    const confirmMic = confirm(
-        "To download audio, microphone access is required to record the generated voice."
-    );
-    if (!confirmMic) return;
-
-    try {
-        let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        let recorder = new MediaRecorder(stream);
-        let chunks = [];
-
-        recorder.ondataavailable = e => chunks.push(e.data);
-
-        recorder.onstop = () => {
-            let blob = new Blob(chunks, { type: "audio/webm" });
-            let url = URL.createObjectURL(blob);
-
-            let a = document.createElement("a");
-            a.href = url;
-            a.download = "voicewave.webm";
-            a.click();
-
-            statusDiv.innerText = "⬇ Download complete";
-        };
-
-        recorder.start();
-
-        let u = createUtterance();
-        if (!u) return;
-
-        synth.speak(u);
-
-        u.onend = () => {
-            recorder.stop();
-            stream.getTracks().forEach(t => t.stop());
-        };
-
-    } catch {
-        statusDiv.innerText = "❌ Mic permission denied";
-    }
 }
 </script>
 
