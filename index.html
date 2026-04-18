@@ -1,169 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VoiceWave</title>
-
-<style>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #fff7cc, #ffe066);
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 10px;
-}
-
-.container {
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(10px);
-    padding: 20px;
-    border-radius: 20px;
-    width: 100%;
-    max-width: 500px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-    border: 2px solid #ffd700;
-}
-
-h1 {
-    text-align: center;
-    font-size: 1.8rem;
-    background: linear-gradient(135deg, #ffd700, #ffb700);
-    -webkit-background-clip: text;
-    color: transparent;
-}
-
-.sub {
-    text-align: center;
-    font-size: 13px;
-    color: #7a5c00;
-    margin-bottom: 15px;
-}
-
-.controls {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.control-box {
-    background: #fffbea;
-    padding: 10px;
-    border-radius: 12px;
-    border: 1px solid #ffe066;
-}
-
-label {
-    font-size: 13px;
-    color: #7a5c00;
-    margin-bottom: 4px;
-    display: block;
-}
-
-select, input[type="range"] {
-    width: 100%;
-}
-
-textarea {
-    width: 100%;
-    height: 120px;
-    border-radius: 12px;
-    border: 1px solid #e6c200;
-    padding: 10px;
-    margin-top: 12px;
-    resize: none;
-    font-size: 14px;
-}
-
-textarea::placeholder {
-    color: #c9a300;
-}
-
-.buttons {
-    margin-top: 15px;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-}
-
-button {
-    background: linear-gradient(135deg, #ffd700, #ffcc00);
-    color: #5a4300;
-    border: none;
-    padding: 10px;
-    border-radius: 15px;
-    font-size: 13px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-button:hover {
-    transform: translateY(-2px);
-    background: #ffcc00;
-}
-
-.status {
-    text-align: center;
-    margin-top: 10px;
-    font-size: 13px;
-    color: #7a5c00;
-}
-
-@media (max-width: 400px) {
-    h1 { font-size: 1.4rem; }
-    textarea { height: 100px; }
-}
-</style>
-</head>
-
-<body>
-
-<div class="container">
-    <h1>✨ VoiceWave</h1>
-    <div class="sub">Text → Audio Generator</div>
-
-    <div class="controls">
-        <div class="control-box">
-            <label>🎤 Select Voice</label>
-            <select id="voice"></select>
-        </div>
-
-        <div class="control-box">
-            <label>⚡ Speed</label>
-            <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
-        </div>
-
-        <div class="control-box">
-            <label>🎵 Pitch (Sound)</label>
-            <input type="range" id="pitch" min="0" max="2" step="0.1" value="1">
-        </div>
-    </div>
-
-    <textarea id="text" placeholder="Input text..."></textarea>
-
-    <div class="buttons">
-        <button onclick="speak()">▶ Speak</button>
-        <button onclick="pause()">⏸ Pause</button>
-        <button onclick="resume()">▶ Resume</button>
-        <button onclick="stop()">⏹ Stop</button>
-    </div>
-
-    <div class="status" id="status">Ready</div>
-</div>
-
 <script>
 const synth = window.speechSynthesis;
 const voiceSelect = document.getElementById("voice");
 const statusDiv = document.getElementById("status");
+
+let currentUtterance = null;
+let isSpeaking = false;
+let isPaused = false;
 
 // Load voices
 function loadVoices() {
@@ -177,8 +19,6 @@ function loadVoices() {
 }
 speechSynthesis.onvoiceschanged = loadVoices;
 loadVoices();
-
-let currentUtterance = null;
 
 // Create speech
 function createUtterance() {
@@ -197,34 +37,65 @@ function createUtterance() {
     u.rate = document.getElementById("rate").value;
     u.pitch = document.getElementById("pitch").value;
 
-    u.onstart = () => statusDiv.innerText = "🔊 Speaking...";
-    u.onend = () => statusDiv.innerText = "✅ Done";
-    u.onpause = () => statusDiv.innerText = "⏸ Paused";
-    u.onresume = () => statusDiv.innerText = "▶ Resumed";
+    u.onstart = () => {
+        isSpeaking = true;
+        isPaused = false;
+        statusDiv.innerText = "🔊 Speaking...";
+    };
+
+    u.onend = () => {
+        isSpeaking = false;
+        isPaused = false;
+        statusDiv.innerText = "✅ Done";
+    };
+
+    u.onpause = () => {
+        isPaused = true;
+        statusDiv.innerText = "⏸ Paused";
+    };
+
+    u.onresume = () => {
+        isPaused = false;
+        statusDiv.innerText = "▶ Resumed";
+    };
+
+    u.onerror = () => {
+        isSpeaking = false;
+        isPaused = false;
+        statusDiv.innerText = "❌ Error occurred";
+    };
 
     return u;
 }
 
-// Controls
+// Speak
 function speak() {
     synth.cancel();
     currentUtterance = createUtterance();
     if (currentUtterance) synth.speak(currentUtterance);
 }
 
+// Pause
 function pause() {
-    if (synth.speaking) synth.pause();
+    if (isSpeaking && !isPaused) {
+        synth.pause();
+    }
 }
 
+// Resume
 function resume() {
-    if (synth.paused) synth.resume();
+    if (isSpeaking && isPaused) {
+        synth.resume();
+    }
 }
 
+// Stop
 function stop() {
-    synth.cancel();
-    statusDiv.innerText = "⏹ Stopped";
+    if (isSpeaking || isPaused) {
+        synth.cancel();
+        isSpeaking = false;
+        isPaused = false;
+        statusDiv.innerText = "⏹ Stopped";
+    }
 }
 </script>
-
-</body>
-</html>
