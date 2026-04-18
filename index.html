@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Voicewave | Text to Audio</title>
+<title>GoldenVoice</title>
 
 <style>
 body {
@@ -27,7 +27,14 @@ body {
 
 h1 {
     text-align: center;
-    color: #d4a017;
+    color: #b89600;
+}
+
+.info {
+    text-align: center;
+    font-size: 13px;
+    color: #7a5c00;
+    margin-bottom: 10px;
 }
 
 .controls {
@@ -93,19 +100,22 @@ button:hover {
 <div class="container">
     <h1>✨ GoldenVoice</h1>
 
+    <div class="info">
+        ⚠️ To download audio, your browser will request microphone access (used only to record generated voice).
+    </div>
+
     <div class="controls">
         <select id="voice"></select>
         <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
         <input type="range" id="pitch" min="0" max="2" step="0.1" value="1">
     </div>
 
-    <!-- TEXT AREA -->
     <textarea id="text" placeholder="Input text..."></textarea>
 
     <div class="buttons">
         <button onclick="speak()">▶ Speak</button>
         <button onclick="stop()">⏹ Stop</button>
-        <button onclick="downloadAudio()">⬇ Download</button>
+        <button onclick="downloadAudio()">⬇ Download (Enable Mic)</button>
     </div>
 
     <div class="status" id="status">Ready</div>
@@ -114,21 +124,30 @@ button:hover {
 <script>
 const synth = window.speechSynthesis;
 const voiceSelect = document.getElementById("voice");
+const statusDiv = document.getElementById("status");
 
+// Load voices
 function loadVoices() {
     voiceSelect.innerHTML = "";
     synth.getVoices().forEach(v => {
         let opt = document.createElement("option");
         opt.value = v.name;
-        opt.textContent = v.name;
+        opt.textContent = v.name + " (" + v.lang + ")";
         voiceSelect.appendChild(opt);
     });
 }
 speechSynthesis.onvoiceschanged = loadVoices;
 loadVoices();
 
+// Create speech
 function createUtterance() {
     let text = document.getElementById("text").value;
+
+    if (!text.trim()) {
+        statusDiv.innerText = "⚠️ Enter text first";
+        return null;
+    }
+
     let u = new SpeechSynthesisUtterance(text);
 
     let voice = synth.getVoices().find(v => v.name === voiceSelect.value);
@@ -137,45 +156,67 @@ function createUtterance() {
     u.rate = document.getElementById("rate").value;
     u.pitch = document.getElementById("pitch").value;
 
+    u.onstart = () => statusDiv.innerText = "🔊 Speaking...";
+    u.onend = () => statusDiv.innerText = "✅ Done";
+
     return u;
 }
 
+// Speak
 function speak() {
     synth.cancel();
     let u = createUtterance();
-    synth.speak(u);
+    if (u) synth.speak(u);
 }
 
+// Stop
 function stop() {
     synth.cancel();
+    statusDiv.innerText = "⏹ Stopped";
 }
 
+// Download with explanation
 async function downloadAudio() {
-    let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    let recorder = new MediaRecorder(stream);
-    let chunks = [];
+    const confirmMic = confirm(
+        "To download audio, we need microphone permission to record the generated speech. Click OK to continue."
+    );
 
-    recorder.ondataavailable = e => chunks.push(e.data);
+    if (!confirmMic) return;
 
-    recorder.onstop = () => {
-        let blob = new Blob(chunks, { type: "audio/webm" });
-        let url = URL.createObjectURL(blob);
+    try {
+        let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        let recorder = new MediaRecorder(stream);
+        let chunks = [];
 
-        let a = document.createElement("a");
-        a.href = url;
-        a.download = "goldenvoice.webm";
-        a.click();
-    };
+        recorder.ondataavailable = e => chunks.push(e.data);
 
-    recorder.start();
+        recorder.onstop = () => {
+            let blob = new Blob(chunks, { type: "audio/webm" });
+            let url = URL.createObjectURL(blob);
 
-    let u = createUtterance();
-    synth.speak(u);
+            let a = document.createElement("a");
+            a.href = url;
+            a.download = "goldenvoice.webm";
+            a.click();
 
-    u.onend = () => {
-        recorder.stop();
-        stream.getTracks().forEach(t => t.stop());
-    };
+            statusDiv.innerText = "⬇ Download complete";
+        };
+
+        recorder.start();
+
+        let u = createUtterance();
+        if (!u) return;
+
+        synth.speak(u);
+
+        u.onend = () => {
+            recorder.stop();
+            stream.getTracks().forEach(t => t.stop());
+        };
+
+    } catch (err) {
+        statusDiv.innerText = "❌ Microphone permission denied";
+    }
 }
 </script>
 
