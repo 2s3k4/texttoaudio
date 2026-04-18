@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voicewave | Text to Audio</title>
+
+<style>
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #fff7cc, #ffe066);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    background: white;
+    padding: 25px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 750px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    border: 2px solid #ffd700;
+}
+
+h1 {
+    text-align: center;
+    color: #d4a017;
+}
+
+.controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+select, input {
+    padding: 8px;
+    border-radius: 10px;
+    border: 1px solid #e6c200;
+}
+
+textarea {
+    width: 100%;
+    height: 150px;
+    border-radius: 10px;
+    border: 1px solid #e6c200;
+    padding: 10px;
+    margin-top: 10px;
+    resize: none;
+}
+
+textarea::placeholder {
+    color: #c9a300;
+}
+
+.buttons {
+    margin-top: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+button {
+    background: linear-gradient(135deg, #ffd700, #ffcc00);
+    color: #5a4300;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover {
+    background: #ffcc00;
+}
+
+.status {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 14px;
+    color: #7a5c00;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h1>✨ GoldenVoice</h1>
+
+    <div class="controls">
+        <select id="voice"></select>
+        <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
+        <input type="range" id="pitch" min="0" max="2" step="0.1" value="1">
+    </div>
+
+    <!-- TEXT AREA -->
+    <textarea id="text" placeholder="Input text..."></textarea>
+
+    <div class="buttons">
+        <button onclick="speak()">▶ Speak</button>
+        <button onclick="stop()">⏹ Stop</button>
+        <button onclick="downloadAudio()">⬇ Download</button>
+    </div>
+
+    <div class="status" id="status">Ready</div>
+</div>
+
+<script>
+const synth = window.speechSynthesis;
+const voiceSelect = document.getElementById("voice");
+
+function loadVoices() {
+    voiceSelect.innerHTML = "";
+    synth.getVoices().forEach(v => {
+        let opt = document.createElement("option");
+        opt.value = v.name;
+        opt.textContent = v.name;
+        voiceSelect.appendChild(opt);
+    });
+}
+speechSynthesis.onvoiceschanged = loadVoices;
+loadVoices();
+
+function createUtterance() {
+    let text = document.getElementById("text").value;
+    let u = new SpeechSynthesisUtterance(text);
+
+    let voice = synth.getVoices().find(v => v.name === voiceSelect.value);
+    if (voice) u.voice = voice;
+
+    u.rate = document.getElementById("rate").value;
+    u.pitch = document.getElementById("pitch").value;
+
+    return u;
+}
+
+function speak() {
+    synth.cancel();
+    let u = createUtterance();
+    synth.speak(u);
+}
+
+function stop() {
+    synth.cancel();
+}
+
+async function downloadAudio() {
+    let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    let recorder = new MediaRecorder(stream);
+    let chunks = [];
+
+    recorder.ondataavailable = e => chunks.push(e.data);
+
+    recorder.onstop = () => {
+        let blob = new Blob(chunks, { type: "audio/webm" });
+        let url = URL.createObjectURL(blob);
+
+        let a = document.createElement("a");
+        a.href = url;
+        a.download = "goldenvoice.webm";
+        a.click();
+    };
+
+    recorder.start();
+
+    let u = createUtterance();
+    synth.speak(u);
+
+    u.onend = () => {
+        recorder.stop();
+        stream.getTracks().forEach(t => t.stop());
+    };
+}
+</script>
+
+</body>
+</html>
