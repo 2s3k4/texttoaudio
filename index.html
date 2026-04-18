@@ -3,94 +3,137 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Voicewave</title>
+<title>VoiceWave</title>
 
 <style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
 body {
     font-family: 'Segoe UI', sans-serif;
     background: linear-gradient(135deg, #fff7cc, #ffe066);
+    min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
+    padding: 10px;
 }
 
+/* CARD */
 .container {
-    background: white;
-    padding: 25px;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    padding: 20px;
     border-radius: 20px;
     width: 100%;
-    max-width: 750px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    max-width: 500px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
     border: 2px solid #ffd700;
 }
 
+/* HEADER */
 h1 {
     text-align: center;
-    color: #b89600;
+    font-size: 1.8rem;
+    background: linear-gradient(135deg, #ffd700, #ffb700);
+    -webkit-background-clip: text;
+    color: transparent;
 }
 
-.info {
+.sub {
     text-align: center;
     font-size: 13px;
     color: #7a5c00;
-    margin-bottom: 10px;
-}
-
-.controls {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
-    gap: 10px;
     margin-bottom: 15px;
 }
 
-select, input {
-    padding: 8px;
-    border-radius: 10px;
-    border: 1px solid #e6c200;
+/* CONTROLS */
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* CONTROL BOX */
+.control-box {
+    background: #fffbea;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid #ffe066;
+}
+
+/* LABEL */
+label {
+    font-size: 13px;
+    color: #7a5c00;
+    margin-bottom: 4px;
+    display: block;
+}
+
+/* INPUTS */
+select, input[type="range"] {
+    width: 100%;
 }
 
 textarea {
     width: 100%;
-    height: 150px;
-    border-radius: 10px;
+    height: 120px;
+    border-radius: 12px;
     border: 1px solid #e6c200;
     padding: 10px;
-    margin-top: 10px;
+    margin-top: 12px;
     resize: none;
+    font-size: 14px;
 }
 
 textarea::placeholder {
     color: #c9a300;
 }
 
+/* BUTTONS */
 .buttons {
     margin-top: 15px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
 }
 
 button {
     background: linear-gradient(135deg, #ffd700, #ffcc00);
     color: #5a4300;
     border: none;
-    padding: 10px 15px;
-    border-radius: 20px;
-    cursor: pointer;
+    padding: 10px;
+    border-radius: 15px;
+    font-size: 13px;
     font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
 }
 
 button:hover {
+    transform: translateY(-2px);
     background: #ffcc00;
 }
 
+/* STATUS */
 .status {
     text-align: center;
     margin-top: 10px;
-    font-size: 14px;
+    font-size: 13px;
     color: #7a5c00;
+}
+
+/* MOBILE OPTIMIZATION */
+@media (max-width: 400px) {
+    h1 {
+        font-size: 1.4rem;
+    }
+    textarea {
+        height: 100px;
+    }
 }
 </style>
 </head>
@@ -98,16 +141,24 @@ button:hover {
 <body>
 
 <div class="container">
-    <h1>✨ Voicewave</h1>
-
-    <div class="info">
-        ⚠️ To download audio, your browser will request microphone access (used only to record generated voice).
-    </div>
+    <h1>✨ VoiceWave</h1>
+    <div class="sub">Text → Audio Generator</div>
 
     <div class="controls">
-        <select id="voice"></select>
-        <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
-        <input type="range" id="pitch" min="0" max="2" step="0.1" value="1">
+        <div class="control-box">
+            <label>🎤 Select Voice</label>
+            <select id="voice"></select>
+        </div>
+
+        <div class="control-box">
+            <label>⚡ Speed</label>
+            <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
+        </div>
+
+        <div class="control-box">
+            <label>🎵 Pitch (Sound)</label>
+            <input type="range" id="pitch" min="0" max="2" step="0.1" value="1">
+        </div>
     </div>
 
     <textarea id="text" placeholder="Input text..."></textarea>
@@ -115,7 +166,7 @@ button:hover {
     <div class="buttons">
         <button onclick="speak()">▶ Speak</button>
         <button onclick="stop()">⏹ Stop</button>
-        <button onclick="downloadAudio()">⬇ Download (Enable Mic)</button>
+        <button onclick="downloadAudio()">⬇ Download</button>
     </div>
 
     <div class="status" id="status">Ready</div>
@@ -175,12 +226,11 @@ function stop() {
     statusDiv.innerText = "⏹ Stopped";
 }
 
-// Download with explanation
+// Download (mic-based)
 async function downloadAudio() {
     const confirmMic = confirm(
-        "To download audio, we need microphone permission to record the generated speech. Click OK to continue."
+        "To download audio, microphone access is required to record the generated voice."
     );
-
     if (!confirmMic) return;
 
     try {
@@ -196,7 +246,7 @@ async function downloadAudio() {
 
             let a = document.createElement("a");
             a.href = url;
-            a.download = "goldenvoice.webm";
+            a.download = "voicewave.webm";
             a.click();
 
             statusDiv.innerText = "⬇ Download complete";
@@ -214,8 +264,8 @@ async function downloadAudio() {
             stream.getTracks().forEach(t => t.stop());
         };
 
-    } catch (err) {
-        statusDiv.innerText = "❌ Microphone permission denied";
+    } catch {
+        statusDiv.innerText = "❌ Mic permission denied";
     }
 }
 </script>
